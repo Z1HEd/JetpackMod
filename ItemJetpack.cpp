@@ -312,7 +312,7 @@ void ItemJetpack::renderEntity(const m4::Mat5& MV, bool inHand, const glm::vec4&
 		glUniform1fv(glGetUniformLocation(shader->id(), "MV"), sizeof(controllerButton2) / sizeof(float), &controllerButton2[0][0]);
 		renderer.render();
 	}
-	if (!player->keys.z) {
+	if (!isFlushing) {
 		glUniform1fv(glGetUniformLocation(shader->id(), "MV"), sizeof(controllerButton3) / sizeof(float), &controllerButton3[0][0]);
 		renderer.render();
 	}
@@ -329,7 +329,7 @@ void ItemJetpack::renderEntity(const m4::Mat5& MV, bool inHand, const glm::vec4&
 		glUniform1fv(glGetUniformLocation(shader->id(), "MV"), sizeof(controllerButton2) / sizeof(float), &controllerButton2[0][0]);
 		renderer.render();
 	}
-	if (player->keys.z) {
+	if (isFlushing) {
 		glUniform1fv(glGetUniformLocation(shader->id(), "MV"), sizeof(controllerButton3) / sizeof(float), &controllerButton3[0][0]);
 		renderer.render();
 	}
