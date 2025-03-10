@@ -16,6 +16,8 @@ public:
 	float fuelLevel = 0;
 	bool isFuelDeadly = false;
 	bool isSelectedFuelDeadly = false;
+	bool isFlushing = false;
+
 	static MeshRenderer renderer;
 
 	static stl::string switchSound;

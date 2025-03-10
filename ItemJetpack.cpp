@@ -1,6 +1,7 @@
 #include "ItemJetpack.h"
 
 MeshRenderer ItemJetpack::renderer{};
+//TODO: make a properly looping sound for flight
 stl::string ItemJetpack::flightSound = "";
 stl::string ItemJetpack::flushSound = "";
 stl::string ItemJetpack::switchSound = "";
@@ -47,7 +48,7 @@ void ItemJetpack::handleFlight(Player* player) {
 
 	timeSinceLastFlightSound += dt;
 
-	if (player->keys.z && fuelLevel > 0.0f) {
+	if (isFlushing && fuelLevel > 0.0f) {
 		AudioManager::playSound4D(flushSound, "ambience", player->cameraPos, { 0,0,0,0 });
 		fuelLevel = 0.0f;
 	}
@@ -56,7 +57,7 @@ void ItemJetpack::handleFlight(Player* player) {
 	curBlock = StateGame::instanceObj->world->getBlock(player->currentBlock - glm::ivec4{ 0,1,0,0 });
 	prevFrameYPos = player->pos.y;
 
-	if (fuelLevel <= 0.0f && player->touchingGround && !player->keys.z) consumeSelectedFuel(player->inventoryAndEquipment);
+	if (fuelLevel <= 0.0f && player->touchingGround && !isFlushing) consumeSelectedFuel(player->inventoryAndEquipment);
 	if (player->touchingGround) return;
 	if (fuelLevel <= 0.0f) return;
 
@@ -408,7 +409,7 @@ $hook(void, Player, update,World* world, double dt, EntityPlayer* entityPlayer) 
 // instantiating jetpack item
 $hookStatic(std::unique_ptr<Item>, Item, instantiateItem, const stl::string& itemName, uint32_t count, const stl::string& type, const nlohmann::json& attributes) {
 
-	if (itemName != "Jetpack")
+	if (type != "jetpack")
 		return original(itemName, count, type, attributes);
 
 	auto result = std::make_unique<ItemJetpack>();

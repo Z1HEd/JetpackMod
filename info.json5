@@ -2,7 +2,25 @@
   id: "zihed.jetpackmod",
   name: "Jetpack Mod",
   author: "ZiHEd",
-  description: "A mod that adds jetpack.",
+  description: "Adds a Jetpack item to the game.\n \
+Press F to switch between 3 modes: Flight, Hover and Off, indicated by a switch on the controller.\n \
+Flight mode: hold space while mid air to propell upwards. Does nothing otherwise.\n \
+Hover mode: will maintain constant height, even by just walking off a block,\n \
+Hold SPACE/SHIFT to go up/down. Off mode disables the jetpack.\n \
+While flying, Jetpack consumes fuel. Biofuel is cheaper, slower and lasts less than Deadly Fuel.\n \
+To switch types of fuel, press R. The old fuel will still be used until the tank is empty.\n \
+Press Z to empty the tank instantly. Refueling will only happen on the ground, if the tank is empty.\n \
+Recipes (result - components): \n \
+Klein Bottle - 3 Glass\n \
+Biofuel - 1 Klein Bottle, 3 Leafs, 1 Wood\n \
+Deadly Fuel - 1 Klein Bottle, 1 Deadly Ore\n \
+Iron Plate - 3 Iron Bars\n \
+Solenoid Wire - 2 Solenoid Bars\n \
+Deadly Casing - 4 Deadly Bars\n \
+Gyroscope - 2 Iron Bars, 1 Compass\n \
+Jetpack Controller - 1 Gyroscope, 2 Solenoid Wire, 1 Iron Plate\n \
+Jetpack - 1 Jetpack Controller, 1 Solenoid Wire, 1 Iron Plate, 2 Deadly Casing\n \
+",
   version: "1.0",
   gameVersion: "0.2.1.4",
   modDLL: "4DMod.dll",

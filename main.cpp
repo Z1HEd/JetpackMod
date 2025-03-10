@@ -291,6 +291,20 @@ $hook(void, StateIntro, init, StateManager& s)
 	ItemJetpack::rendererInit();
 }
 
+// Render compass coords
+$hook(void, Player, renderHud, GLFWwindow* window) {
+	original(self, window);
+
+	ItemJetpack* jetpack;
+	jetpack = dynamic_cast<ItemJetpack*>(self->hotbar.getSlot(self->hotbar.selectedIndex)->get());
+	if (!jetpack) jetpack = dynamic_cast<ItemJetpack*>(self->equipment.getSlot(0)->get());
+	if (!jetpack) return;
+
+	// render rotated to be behind players back, if it isn't already rendered
+	if (!self->isHoldingCompass())
+		CompassRenderer::renderHand(glm::mat4x4{ {0,0,0,1},{0,0,0,0},{0,0,1,0},{1,0,0,0} });
+}
+
 //Keybinds
 void changeFuel(GLFWwindow* window, int action, int mods)
 {
@@ -317,22 +331,21 @@ void changeFlightMode(GLFWwindow* window, int action, int mods)
 	AudioManager::playSound4D(ItemJetpack::switchSound, "ambience", player->cameraPos, { 0,0,0,0 });
 }
 
-$hook(void, Player, renderHud, GLFWwindow* window) {
-	original(self, window);
+void flushFuelTank(GLFWwindow* window, int action, int mods)
+{
+	Player* player = &StateGame::instanceObj->player;
+	if (player == nullptr || player->inventoryManager.isOpen()) return;
 
 	ItemJetpack* jetpack;
-	jetpack = dynamic_cast<ItemJetpack*>(self->hotbar.getSlot(self->hotbar.selectedIndex)->get());
-	if (!jetpack) jetpack = dynamic_cast<ItemJetpack*>(self->equipment.getSlot(0)->get());
+	jetpack = dynamic_cast<ItemJetpack*>(player->hotbar.getSlot(player->hotbar.selectedIndex)->get());
+	if (!jetpack) jetpack = dynamic_cast<ItemJetpack*>(player->equipment.getSlot(0)->get());
 	if (!jetpack) return;
-
-	// render rotated to be behind players back, if it isn't already rendered
-	if (!self->isHoldingCompass())
-		CompassRenderer::renderHand(glm::mat4x4{ {0,0,0,1},{0,0,0,0},{0,0,1,0},{1,0,0,0} });
+	jetpack->isFlushing=action;
 }
-
 
 $exec
 {
 	KeyBinds::addBind("Jetpack Mod", "Change fuel", glfw::Keys::R, KeyBindsScope::PLAYER, changeFuel);
 	KeyBinds::addBind("Jetpack Mod", "Change flight mode", glfw::Keys::F, KeyBindsScope::PLAYER, changeFlightMode);
+	KeyBinds::addBind("Jetpack Mod", "Flush fuel tank", glfw::Keys::Z, KeyBindsScope::PLAYER, flushFuelTank);
 }
