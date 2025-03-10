@@ -23,12 +23,10 @@ std::vector<std::string> toolNames = {
 	"Jetpack"
 };
 
-aui::BarIndicator fuelIndicator{};
 QuadRenderer qr{};
 TexRenderer fuelBackgroundRenderer;
 TexRenderer fuelRenderer;
 gui::Text fuelCountText;
-gui::Text jetpackModeText;
 gui::Interface ui;
 FontRenderer font{};
 
@@ -68,11 +66,6 @@ $hook(void, StateGame, init, StateManager& s)
 	qr.shader = ShaderManager::get("quadShader");
 	qr.init();
 
-	fuelIndicator.setSize(10, 50);
-	fuelIndicator.isHorizontal = false;
-	fuelIndicator.showText = false;
-	fuelIndicator.setOutlineColor(glm::vec4{ 1,1,1,0.75f });
-
 	fuelBackgroundRenderer.texture = ItemBlock::tr->texture;
 	fuelBackgroundRenderer.shader = ShaderManager::get("tex2DShader");
 	fuelBackgroundRenderer.init();
@@ -85,10 +78,6 @@ $hook(void, StateGame, init, StateManager& s)
 	fuelCountText.text = "0";
 	fuelCountText.shadow = true;
 
-	jetpackModeText.size = 2;
-	jetpackModeText.text = "O";
-	jetpackModeText.shadow = true;
-
 	// initialize the Interface
 	ui = gui::Interface{ s.window };
 	ui.viewportCallback = viewportCallback;
@@ -97,8 +86,6 @@ $hook(void, StateGame, init, StateManager& s)
 	ui.qr = &qr;
 
 	ui.addElement(&fuelCountText);
-	ui.addElement(&jetpackModeText);
-	ui.addElement(&fuelIndicator);
 }
 // Render UI
 $hook(void, Player, renderHud, GLFWwindow* window) {
@@ -132,14 +119,6 @@ $hook(void, Player, renderHud, GLFWwindow* window) {
 		posY = self->hotbar.renderPos.y + (8 * 56) + 6;
 	}
 
-
-	fuelIndicator.setFill(jetpack->fuelLevel);
-	fuelIndicator.offsetX(width / 2 + 30);
-	fuelIndicator.offsetY(height / 2 - 25);
-	fuelIndicator.setFillColor(jetpack->isFuelDeadly ?
-		glm::vec4{ 147.0f / 255.0f,55.0f / 255.0f,118.0f / 255.0f,0.75f } :
-		glm::vec4{ 82.0f / 255.0f,144.0f / 255.0f,40.0f / 255.0f,0.75f });
-
 	fuelBackgroundRenderer.setPos(posX, posY, 72, 72);
 	fuelBackgroundRenderer.setClip(0, 0, 36, 36);
 	fuelBackgroundRenderer.setColor(1, 1, 1, 0.4);
@@ -156,20 +135,7 @@ $hook(void, Player, renderHud, GLFWwindow* window) {
 	fuelCountText.text = std::to_string(jetpack->getSelectedFuelCount(self->inventoryAndEquipment));
 	fuelCountText.offsetX(posX + 45);
 	fuelCountText.offsetY(posY + 45);
-
-	switch (jetpack->flightMode) {
-	case ItemJetpack::Flight:
-		jetpackModeText.text = "F";
-		break;
-	case ItemJetpack::Hover:
-		jetpackModeText.text = "H";
-		break;
-	default:
-		jetpackModeText.text = "O";
-		break;
-	}
-	jetpackModeText.offsetX(posX+45);
-	jetpackModeText.offsetY(posY+11);
+	
 
 	ui.render();
 	
@@ -312,6 +278,16 @@ $hook(void, StateIntro, init, StateManager& s)
 
 	initItemNAME();
 
+	ItemJetpack::flightSound = std::format("../../{}/assets/FlightSound.ogg", fdm::getModPath(fdm::modID));
+	ItemJetpack::switchSound = std::format("../../{}/assets/SwitchSound.ogg", fdm::getModPath(fdm::modID));
+	ItemJetpack::flushSound = std::format("../../{}/assets/FlushSound.ogg", fdm::getModPath(fdm::modID));
+	ItemJetpack::fuelSwitchSound = std::format("../../{}/assets/FuelSwitchSound.ogg", fdm::getModPath(fdm::modID));
+
+	if (!AudioManager::loadSound(ItemJetpack::flightSound)) Console::printLine("Cannot load sound: ", ItemJetpack::flightSound);
+	if (!AudioManager::loadSound(ItemJetpack::switchSound)) Console::printLine("Cannot load sound: ", ItemJetpack::switchSound);
+	if (!AudioManager::loadSound(ItemJetpack::flushSound)) Console::printLine("Cannot load sound: ", ItemJetpack::flushSound);
+	if (!AudioManager::loadSound(ItemJetpack::fuelSwitchSound)) Console::printLine("Cannot load sound: ", ItemJetpack::fuelSwitchSound);
+
 	ItemJetpack::rendererInit();
 }
 
@@ -326,6 +302,7 @@ void changeFuel(GLFWwindow* window, int action, int mods)
 	if (!jetpack) jetpack = dynamic_cast<ItemJetpack*>(player->equipment.getSlot(0)->get());
 	if (!jetpack) return;
 	jetpack->isSelectedFuelDeadly = !jetpack->isSelectedFuelDeadly;
+	AudioManager::playSound4D(ItemJetpack::fuelSwitchSound, "ambience", player->cameraPos, { 0,0,0,0 });
 }
 void changeFlightMode(GLFWwindow* window, int action, int mods)
 {
@@ -337,37 +314,25 @@ void changeFlightMode(GLFWwindow* window, int action, int mods)
 	if (!jetpack) jetpack = dynamic_cast<ItemJetpack*>(player->equipment.getSlot(0)->get());
 	if (!jetpack) return;
 	jetpack->flightMode = (ItemJetpack::FlightMode)(((int)jetpack->flightMode+1)%3);
+	AudioManager::playSound4D(ItemJetpack::switchSound, "ambience", player->cameraPos, { 0,0,0,0 });
 }
 
-void flushFuelTank(GLFWwindow* window, int action, int mods)
-{
-	Player* player = &StateGame::instanceObj->player;
-	if (action != GLFW_PRESS || player == nullptr || player->inventoryManager.isOpen()) return;
+$hook(void, Player, renderHud, GLFWwindow* window) {
+	original(self, window);
 
 	ItemJetpack* jetpack;
-	jetpack = dynamic_cast<ItemJetpack*>(player->hotbar.getSlot(player->hotbar.selectedIndex)->get());
-	if (!jetpack) jetpack = dynamic_cast<ItemJetpack*>(player->equipment.getSlot(0)->get());
+	jetpack = dynamic_cast<ItemJetpack*>(self->hotbar.getSlot(self->hotbar.selectedIndex)->get());
+	if (!jetpack) jetpack = dynamic_cast<ItemJetpack*>(self->equipment.getSlot(0)->get());
 	if (!jetpack) return;
-	jetpack->fuelLevel = 0.0f;
+
+	// render rotated to be behind players back, if it isn't already rendered
+	if (!self->isHoldingCompass())
+		CompassRenderer::renderHand(glm::mat4x4{ {0,0,0,1},{0,0,0,0},{0,0,1,0},{1,0,0,0} });
 }
 
-// I was trying to make coordinates render when holding a jetpack since it is made using it
-// It did not render coordinates, instead it locked right click ._.
-/*
-$hook(bool, Player, isHoldingCompass) {
-	if (original(self)) return true;
-	Player* player = &StateGame::instanceObj->player;
-	if (player == nullptr || player->inventoryManager.isOpen()) return false;
 
-	ItemJetpack* jetpack;
-	jetpack = dynamic_cast<ItemJetpack*>(player->hotbar.getSlot(player->hotbar.selectedIndex)->get());
-	if (!jetpack) jetpack = dynamic_cast<ItemJetpack*>(player->equipment.getSlot(0)->get());
-	return jetpack;
-}
-*/
 $exec
 {
 	KeyBinds::addBind("Jetpack Mod", "Change fuel", glfw::Keys::R, KeyBindsScope::PLAYER, changeFuel);
 	KeyBinds::addBind("Jetpack Mod", "Change flight mode", glfw::Keys::F, KeyBindsScope::PLAYER, changeFlightMode);
-	KeyBinds::addBind("Jetpack Mod", "Flush fuel tank", glfw::Keys::Z, KeyBindsScope::PLAYER, flushFuelTank);
 }

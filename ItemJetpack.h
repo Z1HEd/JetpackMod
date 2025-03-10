@@ -17,7 +17,12 @@ public:
 	bool isFuelDeadly = false;
 	bool isSelectedFuelDeadly = false;
 	static MeshRenderer renderer;
-	static std::string flightSound;
+
+	static stl::string switchSound;
+	static stl::string flushSound;
+	static stl::string flightSound;
+	static stl::string fuelSwitchSound;
+	inline static const char* voiceGroup = "ambience";
 
 	void handleFlight(Player* player);
 	int getSelectedFuelCount(InventoryPlayer& inventory);
