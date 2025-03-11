@@ -1,7 +1,6 @@
 //#define DEBUG_CONSOLE // Uncomment this if you want a debug console to start. You can use the Console class to print. You can use Console::inStrings to get input.
 
 #include <4dm.h>
-#include "libs/auilib/auilib.h"
 #include "4DKeyBinds.h"
 #include "ItemJetpack.h"
 
@@ -70,7 +69,7 @@ $hook(void, StateGame, init, StateManager& s)
 	fuelBackgroundRenderer.shader = ShaderManager::get("tex2DShader");
 	fuelBackgroundRenderer.init();
 
-	fuelRenderer.texture = ResourceManager::get("assets/Items.png", true);
+	fuelRenderer.texture = ResourceManager::get("assets/Materials.png", true);
 	fuelRenderer.shader = ShaderManager::get("tex2DShader");
 	fuelRenderer.init();
 
@@ -87,6 +86,7 @@ $hook(void, StateGame, init, StateManager& s)
 
 	ui.addElement(&fuelCountText);
 }
+
 // Render UI
 $hook(void, Player, renderHud, GLFWwindow* window) {
 	original(self, window);
@@ -162,6 +162,7 @@ $hook(void, ItemMaterial, render, const glm::ivec2& pos)
 
 }
 
+//Deadly text effect for materials
 $hook(bool, ItemMaterial, isDeadly)
 {
 	if (self->name == "Deadly Fuel" || self->name == "Deadly Casing")
@@ -169,7 +170,7 @@ $hook(bool, ItemMaterial, isDeadly)
 	return original(self);
 }
 
-// add recipes
+// Add recipes
 $hookStatic(void, CraftingMenu, loadRecipes)
 {
 	static bool recipesLoaded = false;
@@ -250,8 +251,17 @@ $hookStatic(void, CraftingMenu, loadRecipes)
 }
 
 // Initialize stuff
-void initItemNAME()
+$hook(void, StateIntro, init, StateManager& s)
 {
+	original(self, s);
+
+	// initialize opengl stuff
+	glewExperimental = true;
+	glewInit();
+	glfwInit();
+
+
+	// Item blueprints
 	for (int i = 0;i < materialNames.size(); i++)
 		(*Item::blueprints)[materialNames[i]] =
 	{
@@ -265,19 +275,8 @@ void initItemNAME()
 		{ "type", "jetpack" },
 		{ "baseAttributes", { {"fuelLevel", 0.0f},{"isFuelDeadly", false},{"isSelectedFuelDeadly", false}}}
 	};
-}
 
-$hook(void, StateIntro, init, StateManager& s)
-{
-	original(self, s);
-
-	// initialize opengl stuff
-	glewExperimental = true;
-	glewInit();
-	glfwInit();
-
-	initItemNAME();
-
+	//Sounds
 	ItemJetpack::flightSound = std::format("../../{}/assets/FlightSound.ogg", fdm::getModPath(fdm::modID));
 	ItemJetpack::switchSound = std::format("../../{}/assets/SwitchSound.ogg", fdm::getModPath(fdm::modID));
 	ItemJetpack::flushSound = std::format("../../{}/assets/FlushSound.ogg", fdm::getModPath(fdm::modID));
@@ -288,10 +287,11 @@ $hook(void, StateIntro, init, StateManager& s)
 	if (!AudioManager::loadSound(ItemJetpack::flushSound)) Console::printLine("Cannot load sound: ", ItemJetpack::flushSound);
 	if (!AudioManager::loadSound(ItemJetpack::fuelSwitchSound)) Console::printLine("Cannot load sound: ", ItemJetpack::fuelSwitchSound);
 
+	// Jetpack renderer
 	ItemJetpack::rendererInit();
 }
 
-// Render compass coords
+// Render compass coords (ty Redjard)
 $hook(void, Player, renderHud, GLFWwindow* window) {
 	original(self, window);
 
@@ -305,7 +305,7 @@ $hook(void, Player, renderHud, GLFWwindow* window) {
 		CompassRenderer::renderHand(glm::mat4x4{ {0,0,0,1},{0,0,0,0},{0,0,1,0},{1,0,0,0} });
 }
 
-//Keybinds
+// Keybind callbacks
 void changeFuel(GLFWwindow* window, int action, int mods)
 {
 	Player* player = &StateGame::instanceObj->player;
@@ -330,7 +330,6 @@ void changeFlightMode(GLFWwindow* window, int action, int mods)
 	jetpack->flightMode = (ItemJetpack::FlightMode)(((int)jetpack->flightMode+1)%3);
 	AudioManager::playSound4D(ItemJetpack::switchSound, "ambience", player->cameraPos, { 0,0,0,0 });
 }
-
 void flushFuelTank(GLFWwindow* window, int action, int mods)
 {
 	Player* player = &StateGame::instanceObj->player;
@@ -343,6 +342,7 @@ void flushFuelTank(GLFWwindow* window, int action, int mods)
 	jetpack->isFlushing=action;
 }
 
+//Keybinds
 $exec
 {
 	KeyBinds::addBind("Jetpack Mod", "Change fuel", glfw::Keys::R, KeyBindsScope::PLAYER, changeFuel);

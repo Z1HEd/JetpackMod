@@ -29,15 +29,17 @@ public:
 	void handleFlight(Player* player);
 	int getSelectedFuelCount(InventoryPlayer& inventory);
 	void consumeSelectedFuel(InventoryPlayer& inventory);
-
-	std::unique_ptr<Item> clone() override;
 	static void rendererInit();
+
+	bool isCompatible(const std::unique_ptr<Item>& other) override;
 	stl::string getName() override;
-	void render(const glm::ivec2& pos) override;
-	void renderEntity(const m4::Mat5& MV, bool inHand, const glm::vec4& lightDir) override;
 	bool isDeadly() override;
 	uint32_t getStackLimit() override;
+
+	std::unique_ptr<Item> clone() override;
 	nlohmann::json saveAttributes() override;
-private:
-	InventorySession openInstance;
+	
+	void render(const glm::ivec2& pos) override;
+	void renderEntity(const m4::Mat5& MV, bool inHand, const glm::vec4& lightDir) override;
+	
 };

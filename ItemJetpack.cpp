@@ -1,40 +1,11 @@
 #include "ItemJetpack.h"
 
 MeshRenderer ItemJetpack::renderer{};
-//TODO: make a properly looping sound for flight
+//TODO: when 4D modding 2.2 adds SoLoud headers, make a proper sound for flight
 stl::string ItemJetpack::flightSound = "";
 stl::string ItemJetpack::flushSound = "";
 stl::string ItemJetpack::switchSound = "";
 stl::string ItemJetpack::fuelSwitchSound = "";
-
-int ItemJetpack::getSelectedFuelCount(InventoryPlayer& inventory) {
-	int count = 0;
-	for (int slot = 0;slot < inventory.getSlotCount(); slot++) {
-		Item* i = inventory.getSlot(slot)->get();
-		if (i != nullptr && i->getName() == (isSelectedFuelDeadly? "Deadly Fuel" : "Biofuel"))
-			count += i->count;
-
-	}
-	return count;
-}
-
-void ItemJetpack::consumeSelectedFuel(InventoryPlayer& inventory) {
-	for (int slot = 0;slot < inventory.getSlotCount(); slot++) {
-		Item* i = inventory.getSlot(slot)->get();
-		if (i != nullptr && i->getName() == (isSelectedFuelDeadly ? "Deadly Fuel" : "Biofuel")) {
-			i->count--;
-			if (i->count < 1) inventory.getSlot(slot)->reset();
-			fuelLevel = 1.0f;
-			isFuelDeadly = isSelectedFuelDeadly;
-			return;
-		}
-	}
-}
-
-
-stl::string ItemJetpack::getName() {
-	return "Jetpack";
-}
 
 void ItemJetpack::handleFlight(Player* player) {
 	static float prevFrameYPos = player->pos.y;
@@ -63,9 +34,9 @@ void ItemJetpack::handleFlight(Player* player) {
 
 	float thrust = isFuelDeadly ? 80 : 70;
 
-	if (flightMode==Flight) {
+	if (flightMode == Flight) {
 		if (!player->keys.space) return;
-		player->vel.y=std::min(player->vel.y + thrust*(float)dt , isFuelDeadly ? 15.0f : 12.0f);
+		player->vel.y = std::min(player->vel.y + thrust * (float)dt, isFuelDeadly ? 15.0f : 12.0f);
 		fuelLevel -= (float)dt * (isFuelDeadly ? 0.05 : 0.15);
 		if (timeSinceLastFlightSound >= 0.5) {
 			AudioManager::playSound4D(flightSound, "ambience", player->cameraPos, { 0,0,0,0 });
@@ -97,6 +68,62 @@ void ItemJetpack::handleFlight(Player* player) {
 		}
 	}
 }
+int ItemJetpack::getSelectedFuelCount(InventoryPlayer& inventory) {
+	int count = 0;
+	for (int slot = 0;slot < inventory.getSlotCount(); slot++) {
+		Item* i = inventory.getSlot(slot)->get();
+		if (i != nullptr && i->getName() == (isSelectedFuelDeadly? "Deadly Fuel" : "Biofuel"))
+			count += i->count;
+
+	}
+	return count;
+}
+void ItemJetpack::consumeSelectedFuel(InventoryPlayer& inventory) {
+	for (int slot = 0;slot < inventory.getSlotCount(); slot++) {
+		Item* i = inventory.getSlot(slot)->get();
+		if (i != nullptr && i->getName() == (isSelectedFuelDeadly ? "Deadly Fuel" : "Biofuel")) {
+			i->count--;
+			if (i->count < 1) inventory.getSlot(slot)->reset();
+			fuelLevel = 1.0f;
+			isFuelDeadly = isSelectedFuelDeadly;
+			return;
+		}
+	}
+}
+void ItemJetpack::rendererInit() {
+	MeshBuilder mesh{ BlockInfo::HYPERCUBE_FULL_INDEX_COUNT };
+	// vertex position attribute
+	mesh.addBuff(BlockInfo::hypercube_full_verts, sizeof(BlockInfo::hypercube_full_verts));
+	mesh.addAttr(GL_UNSIGNED_BYTE, 4, sizeof(glm::u8vec4));
+	// per-cell normal attribute
+	mesh.addBuff(BlockInfo::hypercube_full_normals, sizeof(BlockInfo::hypercube_full_normals));
+	mesh.addAttr(GL_FLOAT, 1, sizeof(GLfloat));
+
+	mesh.setIndexBuff(BlockInfo::hypercube_full_indices, sizeof(BlockInfo::hypercube_full_indices));
+
+	renderer.setMesh(&mesh);
+}
+
+stl::string ItemJetpack::getName() { return "Jetpack";}
+bool ItemJetpack::isCompatible(const std::unique_ptr<Item>& other) {
+	return (dynamic_cast<ItemJetpack*>(other.get()));
+}
+bool ItemJetpack::isDeadly() { return true; }
+uint32_t ItemJetpack::getStackLimit() { return 1; }
+
+std::unique_ptr<Item> ItemJetpack::clone() {
+	auto result = std::make_unique<ItemJetpack>();
+
+	result->fuelLevel = fuelLevel;
+	result->isFuelDeadly = isFuelDeadly;
+	result->isSelectedFuelDeadly = isSelectedFuelDeadly;
+	result->flightMode = flightMode;
+
+	return result;
+}
+nlohmann::json ItemJetpack::saveAttributes() {
+	return { { "fuelLevel", fuelLevel }, { "isFuelDeadly", isFuelDeadly}, { "isSelectedFuelDeadly", isSelectedFuelDeadly} };
+}
 
 void ItemJetpack::render(const glm::ivec2& pos) {
 	TexRenderer& tr = *ItemTool::tr; // or TexRenderer& tr = ItemTool::tr; after 0.3
@@ -110,7 +137,6 @@ void ItemJetpack::render(const glm::ivec2& pos) {
 	tr.texture = ogTex; // return to the original texture
 
 }
-
 void ItemJetpack::renderEntity(const m4::Mat5& MV, bool inHand, const glm::vec4& lightDir) {
 
 	Player* player = &StateGame::instanceObj->player;
@@ -366,37 +392,7 @@ void ItemJetpack::renderEntity(const m4::Mat5& MV, bool inHand, const glm::vec4&
 	renderer.render();
 }
 
-void ItemJetpack::rendererInit() {
-	MeshBuilder mesh{ BlockInfo::HYPERCUBE_FULL_INDEX_COUNT };
-	// vertex position attribute
-	mesh.addBuff(BlockInfo::hypercube_full_verts, sizeof(BlockInfo::hypercube_full_verts));
-	mesh.addAttr(GL_UNSIGNED_BYTE, 4, sizeof(glm::u8vec4));
-	// per-cell normal attribute
-	mesh.addBuff(BlockInfo::hypercube_full_normals, sizeof(BlockInfo::hypercube_full_normals));
-	mesh.addAttr(GL_FLOAT, 1, sizeof(GLfloat));
-
-	mesh.setIndexBuff(BlockInfo::hypercube_full_indices, sizeof(BlockInfo::hypercube_full_indices));
-
-	renderer.setMesh(&mesh);
-}
-
-bool ItemJetpack::isDeadly() { return true; }
-uint32_t ItemJetpack::getStackLimit() { return 1; }
-
-nlohmann::json ItemJetpack::saveAttributes() {
-	return { { "fuelLevel", fuelLevel }, { "isFuelDeadly", isFuelDeadly}, { "isSelectedFuelDeadly", isSelectedFuelDeadly} };
-}
-
-std::unique_ptr<Item> ItemJetpack::clone() {
-	auto result = std::make_unique<ItemJetpack>();
-
-	result->fuelLevel = fuelLevel;
-	result->isFuelDeadly =isFuelDeadly;
-	result->isSelectedFuelDeadly = isSelectedFuelDeadly;
-
-	return result;
-}
-
+// Flying
 $hook(void, Player, update,World* world, double dt, EntityPlayer* entityPlayer) {
 	original(self, world, dt,entityPlayer);
 	ItemJetpack* jetpack;
@@ -406,7 +402,7 @@ $hook(void, Player, update,World* world, double dt, EntityPlayer* entityPlayer) 
 	jetpack->handleFlight(self);
 }
 
-// instantiating jetpack item
+// Instantiating jetpack item
 $hookStatic(std::unique_ptr<Item>, Item, instantiateItem, const stl::string& itemName, uint32_t count, const stl::string& type, const nlohmann::json& attributes) {
 
 	if (type != "jetpack")
